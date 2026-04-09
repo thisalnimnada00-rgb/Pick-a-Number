@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Number Game V2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        
+        :root {
+            --tw-color-primary: #ff00ff;
+        }
+        
+        body {
+            font-family: 'Press Start 2P', system-ui;
+        }
+        
+        .neon-text {
+            text-shadow: 
+                0 0 5px #ff00ff,
+                0 0 10px #ff00ff,
+                0 0 20px #00ffff;
+        }
+        
+        .category-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .category-card:hover {
+            transform: scale(1.05) rotate(2deg);
+            box-shadow: 0 0 25px -5px rgb(249 115 22);
+        }
+        
+        .question-card {
+            transition: all 0.2s ease;
+        }
+        
+        .question-card:hover {
+            background-color: #1f2937;
+            transform: translateX(8px);
+        }
+        
+        .modal {
+            animation: popIn 0.3s ease forwards;
+        }
+        
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .scanlines {
+            background: linear-gradient(
+                to bottom,
+                rgba(0, 255, 255, 0.05) 50%,
+                transparent 50%
+            );
+            background-size: 100% 4px;
+            animation: scan 4s linear infinite;
+        }
+    </style>
+</head>
+<body class="bg-black text-white min-h-screen flex flex-col">
+    <!-- HEADER -->
+    <div class="border-b border-pink-500 bg-zinc-950 py-4 px-6 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-gradient-to-br from-pink-500 to-cyan-400 rounded-full flex items-center justify-center text-xl">🎲</div>
+            <div>
+                <h1 class="text-3xl font-bold neon-text tracking-widest">THE NUMBER GAME</h1>
+                <p class="text-xs text-cyan-400 -mt-1">V2 • Made by M1G4 • Remixed by Grok</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-4 text-sm">
+            <!-- Mode Toggle -->
+            <div onclick="toggleMode()" id="mode-toggle" 
+                 class="flex bg-zinc-900 rounded-3xl p-1 cursor-pointer border border-pink-500">
+                <div id="solo-tab" onclick="event.stopImmediatePropagation();switchToSolo()" 
+                     class="px-6 py-2 rounded-3xl text-xs font-medium transition-colors">SOLO</div>
+                <div id="multi-tab" onclick="event.stopImmediatePropagation();switchToMulti()" 
+                     class="px-6 py-2 rounded-3xl text-xs font-medium bg-pink-500 text-black transition-colors">MULTIPLAYER 🔥</div>
+            </div>
+            
+            <div onclick="showHelp()" class="cursor-pointer text-cyan-400 hover:text-white flex items-center gap-1 text-xs">
+                <span>?</span>
+                <span>HOW TO PLAY</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- SOLO MODE SCREEN -->
+    <div id="solo-screen" class="flex-1 p-6">
+        <div class="max-w-6xl mx-auto">
+            <h2 class="text-2xl mb-6 text-center text-pink-400">CHOOSE YOUR CATEGORY</h2>
+            
+            <!-- Categories Grid -->
+            <div id="categories-grid-solo" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <!-- Populated by JS -->
+            </div>
+            
+            <!-- Random button -->
+            <div onclick="pickRandomQuestion()" 
+                 class="mt-8 mx-auto flex items-center justify-center gap-3 bg-gradient-to-r from-pink-500 to-cyan-400 text-black font-bold py-4 px-8 rounded-2xl w-fit cursor-pointer hover:brightness-110">
+                <span class="text-2xl">🎰</span>
+                RANDOM QUESTION FROM ANYWHERE
+            </div>
+        </div>
+    </div>
+
+    <!-- MULTIPLAYER LOBBY -->
+    <div id="multi-lobby" class="flex-1 p-6 hidden">
+        <div class="max-w-2xl mx-auto bg-zinc-900 border border-cyan-400 rounded-3xl p-8">
+            <h2 class="text-2xl text-center mb-6 neon-text">MULTIPLAYER ARENA</h2>
+            
+            <div class="mb-6">
+                <label class="text-xs text-cyan-400 block mb-2">YOUR PLAYER NAME</label>
+                <input id="player-name-input" 
+                       value="PLAYER1"
+                       class="w-full bg-black border border-pink-400 rounded-2xl px-6 py-4 text-lg focus:outline-none focus:border-cyan-400">
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <!-- Create Room -->
+                <div onclick="createRoom()" 
+                     class="bg-gradient-to-br from-emerald-500 to-cyan-400 text-black rounded-3xl p-6 cursor-pointer hover:scale-105 transition-all flex flex-col items-center justify-center">
+                    <div class="text-5xl mb-3">🏠</div>
+                    <div class="font-bold text-xl">CREATE ROOM</div>
+                    <div class="text-xs opacity-75">Share code with friend</div>
+                </div>
+                
+                <!-- Join Room -->
+                <div onclick="showJoinForm()" 
+                     class="bg-gradient-to-br from-pink-500 to-purple-400 text-black rounded-3xl p-6 cursor-pointer hover:scale-105 transition-all flex flex-col items-center justify-center">
+                    <div class="text-5xl mb-3">🔌</div>
+                    <div class="font-bold text-xl">JOIN ROOM</div>
+                    <div class="text-xs opacity-75">Enter friend's code</div>
+                </div>
+            </div>
+            
+            <!-- Room Code Display -->
+            <div id="created-room-panel" class="hidden mt-8 bg-black border border-emerald-400 rounded-2xl p-6 text-center">
+                <div class="text-xs text-emerald-400 mb-2">YOUR ROOM CODE (SHARE IT!)</div>
+                <div id="room-code-display" onclick="copyRoomCode()" 
+                     class="text-6xl font-bold tracking-[8px] bg-zinc-950 py-4 rounded-2xl cursor-pointer select-all"></div>
+                <p class="text-xs text-emerald-400 mt-3">Waiting for your friend to join...</p>
+                <button onclick="cancelRoom()" 
+                        class="mt-4 text-xs px-8 py-3 border border-red-400 rounded-2xl hover:bg-red-400 hover:text-black">CANCEL ROOM</button>
+            </div>
+            
+            <!-- Join Form -->
+            <div id="join-form-panel" class="hidden mt-8">
+                <div class="flex gap-3">
+                    <input id="join-code-input" placeholder="ENTER 6-CHAR CODE" 
+                           class="flex-1 bg-black border border-purple-400 rounded-2xl px-6 py-4 text-center text-2xl uppercase tracking-widest focus:outline-none">
+                    <button onclick="joinRoom()" 
+                            class="px-10 bg-purple-500 hover:bg-purple-600 text-black font-bold rounded-2xl">JOIN</button>
+                </div>
+                <button onclick="hideJoinForm()" class="text-xs mt-4 text-zinc-400">← back</button>
+            </div>
+            
+            <div id="lobby-status" class="text-center text-xs text-cyan-400 mt-6 min-h-[24px]"></div>
+        </div>
+    </div>
+
+    <!-- MULTIPLAYER GAME SCREEN -->
+    <div id="multi-game-screen" class="flex-1 p-6 hidden">
+        <div class="max-w-6xl mx-auto">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="bg-emerald-400 text-black text-xs font-bold px-4 py-1 rounded-3xl">YOU</div>
+                    <span id="my-name-display" class="font-mono text-lg"></span>
+                </div>
+                <div class="flex items-center gap-2 text-cyan-400 text-sm">
+                    <div class="w-3 h-3 bg-cyan-400 rounded-full animate-pulse"></div>
+                    CONNECTED
+                </div>
+                <div class="flex items-center gap-3">
+                    <span id="opp-name-display" class="font-mono text-lg text-right"></span>
+                    <div class="bg-pink-400 text-black text-xs font-bold px-4 py-1 rounded-3xl">THEM</div>
+                </div>
+            </div>
+            
+            <!-- Turn indicator -->
+            <div id="turn-indicator" onclick="if(this.dataset.mode==='waiting') pickForOpponent()" 
+                 class="mb-8 text-center text-sm font-bold py-3 px-6 bg-gradient-to-r from-pink-500 to-cyan-400 text-black rounded-3xl flex items-center justify-center gap-3 cursor-pointer">
+                <span id="turn-text">YOUR TURN • Pick a question for them</span>
+            </div>
+            
+            <!-- Category grid for multiplayer (same as solo but different click handler) -->
+            <h3 class="text-pink-400 text-center mb-4 text-sm tracking-widest">CHOOSE CATEGORY → PICK QUESTION FOR OPPONENT</h3>
+            <div id="categories-grid-multi" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <!-- Populated by JS -->
+            </div>
+            
+            <div class="flex justify-center gap-6 mt-8">
+                <button onclick="viewHistory()" 
+                        class="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 px-6 py-3 rounded-2xl text-sm">
+                    <span>📜</span> VIEW GAME HISTORY
+                </button>
+                <button onclick="leaveMultiGame()" 
+                        class="flex items-center gap-2 text-red-400 hover:text-white px-6 py-3 rounded-2xl text-sm">
+                    <span>🚪</span> LEAVE ROOM
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- QUESTIONS LIST SCREEN (used by both modes) -->
+    <div id="questions-screen" class="hidden flex-1 p-6 bg-black">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex items-center justify-between mb-6">
+                <button onclick="backToCategories()" 
+                        class="flex items-center gap-2 text-cyan-400 hover:text-white">
+                    ← BACK
+                </button>
+                <h2 id="current-category-title" class="text-2xl text-pink-400"></h2>
+                <div onclick="if(window.currentMode==='multi') cancelPick()" class="text-xs px-4 py-2 bg-zinc-800 rounded-2xl cursor-pointer">CANCEL</div>
+            </div>
+            
+            <div id="questions-list" class="space-y-3">
+                <!-- JS populated cards -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ANSWER MODAL -->
+    <div id="answer-modal" onclick="if(event.target.id === 'answer-modal') hideModal()" 
+         class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+        <div onclick="event.stopImmediatePropagation()" 
+             class="modal bg-zinc-900 border border-pink-400 rounded-3xl max-w-lg w-full mx-4 p-8">
+            <div id="modal-question" class="text-xl leading-relaxed mb-8"></div>
+            
+            <textarea id="answer-input" rows="4"
+                      class="w-full bg-black border border-cyan-300 rounded-2xl p-6 text-white placeholder:text-zinc-500 focus:outline-none resize-none"
+                      placeholder="Type your answer here... be honest 👀"></textarea>
+            
+            <div class="flex gap-4 mt-8">
+                <button onclick="hideModal()" 
+                        class="flex-1 py-5 text-zinc-400 border border-zinc-400 rounded-2xl font-medium">CANCEL</button>
+                <button onclick="submitAnswer()" 
+                        class="flex-1 py-5 bg-gradient-to-r from-pink-500 to-cyan-400 text-black font-bold rounded-2xl">SEND ANSWER 🚀</button>
+            </div>
+            
+            <div id="modal-hint" class="text-xs text-center mt-4 text-cyan-400"></div>
+        </div>
+    </div>
+
+    <!-- HISTORY MODAL -->
+    <div id="history-modal" onclick="if(event.target.id === 'history-modal') hideHistory()" 
+         class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+        <div onclick="event.stopImmediatePropagation()" 
+             class="modal bg-zinc-900 border border-cyan-400 rounded-3xl max-w-2xl w-full mx-4 p-6 max-h-[80vh] overflow-auto">
+            <h3 class="text-xl mb-4 flex justify-between">
+                <span>GAME HISTORY</span>
+                <span onclick="hideHistory()" class="cursor-pointer">✕</span>
+            </h3>
+            <div id="history-content" class="space-y-6 text-sm">
+                <!-- JS populated -->
+            </div>
+        </div>
+    </div>
+
+    <!-- HELP / INFO -->
+    <div id="help-modal" onclick="if(event.target.id === 'help-modal') hideHelp()" 
+         class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+        <div onclick="event.stopImmediatePropagation()" class="modal bg-zinc-900 rounded-3xl p-8 max-w-md w-full mx-4">
+            <h2 class="text-2xl mb-6">HOW TO PLAY</h2>
+            <div class="space-y-6 text-sm leading-relaxed">
+                <div>
+                    <strong class="text-pink-400">SOLO MODE</strong><br>
+                    Pick any category → choose a question → answer honestly. Pure fun!
+                </div>
+                <div>
+                    <strong class="text-cyan-400">MULTIPLAYER MODE 🔥</strong><br>
+                    • Create or join a room with a friend<br>
+                    • One player picks a question for the OTHER player<br>
+                    • The question instantly appears on their screen<br>
+                    • They type an answer → everyone sees it<br>
+                    • Take turns roasting / learning about each other
+                </div>
+                <div class="text-xs text-zinc-400">
+                    Built as a single HTML file • No server needed • Powered by PeerJS P2P<br>
+                    Deploy to GitHub Pages in 30 seconds!
+                </div>
+            </div>
+            <button onclick="hideHelp()" 
+                    class="mt-8 w-full py-5 bg-white text-black font-bold rounded-2xl">COOL, GOT IT</button>
+        </div>
+    </div>
+
+    <script>
+        // ============== GAME DATA (extracted from your image) ==============
+        const gameData = {
+            "The Basics": [
+                { num: 1, text: "Age" },
+                { num: 2, text: "Gender" },
+                { num: 3, text: "Height" },
+                { num: 4, text: "Weight" },
+                { num: 5, text: "Where are you from" },
+                { num: 6, text: "Zodiac Sign" },
+                { num: 7, text: "First Name" },
+                { num: 8, text: "Last Name" },
+                { num: 9, text: "Middle Name" },
+                { num: 10, text: "Birthday" },
+                { num: 11, text: "Main Language(s)" }
+            ],
+            "Hobbies/Favourite Things": [
+                { num: 12, text: "Favorite Color" },
+                { num: 13, text: "Favorite Food" },
+                { num: 14, text: "Favorite Activity" },
+                { num: 15, text: "Favorite Music genre" },
+                { num: 16, text: "Favorite Artist" },
+                { num: 17, text: "Favorite Song" },
+                { num: 18, text: "Favorite Movie" },
+                { num: 19, text: "Favorite Video Game (if any)" },
+                { num: 20, text: "Favorite TV show" },
+                { num: 21, text: "Do you play any sports" },
+                { num: 22, text: "Last thing you did" }
+            ],
+            "Life/Experiences": [
+                { num: 23, text: "Do you currently have a job" },
+                { num: 24, text: "Future Job/Career/Ambitions" },
+                { num: 25, text: "Have you drank/smoked anything" },
+                { num: 26, text: "Have you done drugs" },
+                { num: 27, text: "Do you have any pets" },
+                { num: 28, text: "Most Favorable Memory" },
+                { num: 29, text: "Most embarrassing moment" },
+                { num: 30, text: "Dream Vacation" },
+                { num: 31, text: "How many Family members" },
+                { num: 32, text: "How many friends" },
+                { num: 33, text: "Do you plan on going to college/university" }
+            ],
+            "Social Media": [
+                { num: 34, text: "Do you use any other social media" },
+                { num: 35, text: "Who do you follow" },
+                { num: 36, text: "Have you ever had an internet argument" },
+                { num: 37, text: "Most used Social Media app" },
+                { num: 38, text: "What's your username on each app" },
+                { num: 39, text: "Have you met any friends online" },
+                { num: 40, text: "Do you follow any NSFW accounts/pages" },
+                { num: 41, text: "Last Person you DM'd/followed" },
+                { num: 42, text: "What was the last message you sent" },
+                { num: 43, text: "How many followers/friends on social media" },
+                { num: 44, text: "Amount of time you use social media" }
+            ],
+            "Personal Belongings": [
+                { num: 45, text: "Most expensive thing you own" },
+                { num: 46, text: "Do you own anything above $1,000" },
+                { num: 47, text: "Most prized possession" },
+                { num: 48, text: "Do you own anything embarrassing" },
+                { num: 49, text: "Weirdest thing you own" },
+                { num: 50, text: "Do you own anything popular" },
+                { num: 51, text: "Do you own anything considered 'rich'" },
+                { num: 52, text: "Do you own anything futuristic" },
+                { num: 53, text: "Coolest thing you own" },
+                { num: 54, text: "Oldest thing you own" },
+                { num: 55, text: "What did you buy/get recently" }
+            ],
+            "Looks/Appearance": [
+                { num: 66, text: "Hair Style" },
+                { num: 67, text: "Hair Length" },
+                { num: 68, text: "Hair Color" },
+                { num: 69, text: "Nice" },
+                { num: 70, text: "Body Style" },
+                { num: 71, text: "Ethnicity" },
+                { num: 72, text: "What are you wearing" },
+                { num: 73, text: "Eye Color" },
+                { num: 74, text: "Are you wearing makeup" },
+                { num: 75, text: "Type of Underwear you wear" },
+                { num: 76, text: "Favorite outfit" },
+                { num: 77, text: "Facial/Body Hair" }
+            ],
+            "Relationships": [
+                { num: 78, text: "Sexuality" },
+                { num: 79, text: "Relationship Status" },
+                { num: 80, text: "Who is your crush" },
+                { num: 81, text: "Celebrity Crush" },
+                { num: 82, text: "Have you ever cheated on someone" },
+                { num: 83, text: "Ideal Girlfriend/Boyfriend" },
+                { num: 84, text: "Idea of Perfect Date" },
+                { num: 85, text: "Have you asked someone out" },
+                { num: 86, text: "What do you hope in a relationship" },
+                { num: 87, text: "Are you interested in anyone" },
+                { num: 88, text: "Do you real life/online date" }
+            ],
+            "Sex/Sexuality": [
+                { num: 89, text: "Are you a virgin" },
+                { num: 90, text: "Have you ever seen anyone naked" },
+                { num: 91, text: "Do you have piercing/tattoos" },
+                { num: 92, text: "Have you ever had same-sex experience" },
+                { num: 93, text: "Have you ever sent a nude" },
+                { num: 94, text: "Have you ever sexted" },
+                { num: 95, text: "Have you ever kissed anyone" },
+                { num: 96, text: "Am I attractive" },
+                { num: 97, text: "Have you ever slept together" },
+                { num: 98, text: "Do you want to have sex" },
+                { num: 99, text: "Are you straight, bi, gay/lesbian, pan, etc." }
+            ],
+            "Sexual": [
+                { num: 100, text: "Bra/Dick size" },
+                { num: 101, text: "Public Hair: Natural, trimmed, shaved, none" },
+                { num: 102, text: "Do you have any body hair" },
+                { num: 103, text: "(Guys Only) Are you Circumcised" },
+                { num: 104, text: "How often you Masturbate" },
+                { num: 105, text: "Have you ever watched porn" },
+                { num: 106, text: "Ideal Sexual/Physical attributes" },
+                { num: 107, text: "Favorite Sexual Fantasy" },
+                { num: 108, text: "Turn Ons/Turn Offs" },
+                { num: 109, text: "Any Kinks" },
+                { num: 110, text: "Ideal Sexual Position" },
+                { num: 111, text: "How do you masturbate" },
+                { num: 112, text: "Do you own a toy" },
+                { num: 113, text: "Have you ever been caught Masturbating" },
+                { num: 114, text: "Have you ever walked in when someone was having sex" },
+                { num: 115, text: "Biggest fears of Sex" },
+                { num: 116, text: "Do you have any STDs" },
+                { num: 117, text: "How often are you horny" },
+                { num: 118, text: "Most embarrassing sexual story" },
+                { num: 119, text: "Are you currently horny" },
+                { num: 120, text: "What do you expect in a sexual relationship" }
+            ],
+            "Academic/School": [
+                { num: 121, text: "Where do you go to school" },
+                { num: 122, text: "What classes do you take" },
+                { num: 123, text: "What grade are you in" },
+                { num: 124, text: "Most favorite teacher" },
+                { num: 125, text: "Least favorite teachers" },
+                { num: 126, text: "Highest Grade/Lowest Grade in classes" },
+                { num: 127, text: "How long is your school day" },
+                { num: 128, text: "Did you do your homework" },
+                { num: 129, text: "Do you have any test, quizzes, or exams coming up" },
+                { num: 130, text: "Last bad grade" },
+                { num: 131, text: "Last good grade" }
+            ],
+            "Economic Status/Wealth": [
+                { num: 132, text: "Are you rich/poor" },
+                { num: 133, text: "Where do you stand in the wealth class (lower class, middle class, upper class)" },
+                { num: 134, text: "How big is your house" },
+                { num: 135, text: "Take a picture of your house" },
+                { num: 136, text: "How much do your parents make" },
+                { num: 137, text: "Do your parents struggle with debt" },
+                { num: 138, text: "Do you own a pool (above-ground/below-ground)" },
+                { num: 139, text: "Do you live in a gated neighborhood" },
+                { num: 140, text: "Do you have expensive stuff" },
+                { num: 141, text: "How big is your room" },
+                { num: 142, text: "What kind of school do you go to" }
+            ],
+            "Misc": [
+                { num: 143, text: "Send a selfie" },
+                { num: 144, text: "Do whatever I say (no saying no)" },
+                { num: 145, text: "DM me" },
+                { num: 146, text: "Ask whatever you want (I can't say no)" }
+            ]
+        }
+
+        // ============== GLOBAL STATE ==============
+        let currentMode = 'solo'           // 'solo' or 'multi'
+        let currentCategory = null
+        let peer = null
+        let conn = null
+        let myName = ''
+        let oppName = ''
+        let roomCode = ''
+        let isHost = false
+        let gameHistory = []               // shared history between players
+        let currentPickMode = false        // true when I'm picking for opponent
+
+        // Tailwind script init
+        function initTailwind() {
+            tailwind.config = {
+                content: [],
+                theme: {
+                    extend: {}
+                }
+            }
+        }
+
+        // ============== RENDER CATEGORIES ==============
+        function renderCategories(containerId, isMulti = false) {
+            const container = document.getElementById(containerId)
+            container.innerHTML = ''
+            
+            const colors = ['from-pink-500', 'from-cyan-400', 'from-emerald-400', 'from-purple-500', 'from-amber-400', 'from-red-400']
+            let i = 0
+            
+            Object.keys(gameData).forEach(cat => {
+                const color = colors[i % colors.length]
+                i++
+                
+                const cardHTML = `
+                <div onclick="${isMulti ? `multiPickCategory('${cat}')` : `openQuestions('${cat}')`}" 
+                     class="category-card bg-gradient-to-br ${color} to-zinc-900 text-black p-6 rounded-3xl cursor-pointer flex flex-col">
+                    <div class="text-xs opacity-75 tracking-widest">${cat.toUpperCase()}</div>
+                    <div class="text-2xl font-bold mt-auto">${cat}</div>
+                    <div class="text-xs mt-2 opacity-75">${gameData[cat].length} questions</div>
+                </div>`
+                container.innerHTML += cardHTML
+            })
+        }
+
+        // ============== SOLO MODE FUNCTIONS ==============
+        function openQuestions(cat) {
+            currentCategory = cat
+            document.getElementById('solo-screen').classList.add('hidden')
+            const qs = document.getElementById('questions-screen')
+            qs.classList.remove('hidden')
+            qs.classList.add('flex')
+            
+            document.getElementById('current-category-title').innerHTML = `
+                ${cat} 
+                <span class="text-xs bg-pink-400 text-black px-3 py-1 rounded-3xl ml-3">SOLO</span>`
+            
+            const listEl = document.getElementById('questions-list')
+            listEl.innerHTML = ''
+            
+            gameData[cat].forEach(q => {
+                const div = document.createElement('div')
+                div.className = 'question-card flex justify-between items-center bg-zinc-900 border border-zinc-700 hover:border-pink-400 px-6 py-5 rounded-3xl cursor-pointer'
+                div.innerHTML = `
+                    <div class="flex items-center gap-6">
+                        <div class="w-12 h-12 bg-pink-400 text-black font-bold flex items-center justify-center text-2xl rounded-2xl">${q.num}</div>
+                        <div class="text-lg">${q.text}</div>
+                    </div>
+                    <div class="text-4xl text-pink-400">→</div>`
+                div.onclick = () => showAnswerModal(q.num, q.text, 'solo')
+                listEl.appendChild(div)
+            })
+        }
+
+        function backToCategories() {
+            const qs = document.getElementById('questions-screen')
+            qs.classList.add('hidden')
+            qs.classList.remove('flex')
+            document.getElementById('solo-screen').classList.remove('hidden')
+            currentCategory = null
+        }
+
+        // ============== ANSWER MODAL ==============
+        let currentAnsweringQuestion = null
+        
+        function showAnswerModal(num, text, mode = 'solo') {
+            currentAnsweringQuestion = { num, text, mode }
+            const modal = document.getElementById('answer-modal')
+            modal.classList.remove('hidden')
+            modal.classList.add('flex')
+            
+            document.getElementById('modal-question').innerHTML = `
+                <span class="text-4xl text-pink-400">#${num}</span><br>
+                <span class="text-2xl">${text}</span>`
+            
+            const hint = document.getElementById('modal-hint')
+            hint.textContent = mode === 'multi' 
+                ? "Your answer will be sent to your friend instantly 👀" 
+                : "Be honest. No one is judging... yet."
+            
+            document.getElementById('answer-input').value = ''
+            document.getElementById('answer-input').focus()
+        }
+        
+        function hideModal() {
+            const modal = document.getElementById('answer-modal')
+            modal.classList.add('hidden')
+            modal.classList.remove('flex')
+            currentAnsweringQuestion = null
+        }
+        
+        function submitAnswer() {
+            const input = document.getElementById('answer-input').value.trim()
+            if (!input) return
+            
+            const q = currentAnsweringQuestion
+            
+            if (q.mode === 'solo') {
+                // Solo just logs locally
+                gameHistory.push({
+                    num: q.num,
+                    question: q.text,
+                    answer: input,
+                    by: 'YOU (solo)',
+                    timestamp: new Date()
+                })
+                hideModal()
+                backToCategories()
+                showToast(`Answer saved for #${q.num}! 🎉`)
+            } 
+            else if (q.mode === 'multi') {
+                // Send to opponent
+                if (conn && conn.open) {
+                    conn.send({
+                        type: 'answer',
+                        num: q.num,
+                        question: q.text,
+                        answer: input,
+                        from: myName
+                    })
+                    gameHistory.push({
+                        num: q.num,
+                        question: q.text,
+                        answer: input,
+                        by: 'YOU',
+                        timestamp: new Date()
+                    })
+                    hideModal()
+                    showToast(`Answer sent to ${oppName}! 🔥`)
+                    // Switch turn automatically
+                    currentPickMode = false
+                    updateTurnIndicator()
+                }
+            }
+        }
+        
+        // ============== MULTIPLAYER CORE (PeerJS P2P) ==============
+        function createRoom() {
+            myName = document.getElementById('player-name-input').value.trim() || 'PLAYER1'
+            isHost = true
+            roomCode = Math.random().toString(36).substring(2, 8).toUpperCase()
+            
+            document.getElementById('multi-lobby').classList.add('hidden')
+            document.getElementById('created-room-panel').classList.remove('hidden')
+            document.getElementById('room-code-display').textContent = roomCode
+            
+            // Create peer with custom ID = room code
+            peer = new Peer(roomCode, {
+                debug: 2
+            })
+            
+            peer.on('open', (id) => {
+                document.getElementById('lobby-status').innerHTML = `✅ Room created<br><span class="text-xs">Waiting for friend to join with code <span class="font-mono">${roomCode}</span></span>`
+            })
+            
+            peer.on('connection', (connection) => {
+                conn = connection
+                setupConnectionHandlers()
+            })
+            
+            peer.on('error', (err) => {
+                console.error(err)
+                if (err.type === 'unavailable-id') {
+                    showToast('Code already taken. Try again!', 'error')
+                    cancelRoom()
+                }
+            })
+        }
+        
+        function showJoinForm() {
+            document.getElementById('join-form-panel').classList.remove('hidden')
+        }
+        
+        function hideJoinForm() {
+            document.getElementById('join-form-panel').classList.add('hidden')
+        }
+        
+        function joinRoom() {
+            myName = document.getElementById('player-name-input').value.trim() || 'PLAYER2'
+            const code = document.getElementById('join-code-input').value.trim().toUpperCase()
+            if (!code) return
+            
+            document.getElementById('multi-lobby').classList.add('hidden')
+            document.getElementById('lobby-status').innerHTML = '🔌 Connecting...'
+            
+            peer = new Peer({
+                debug: 2
+            })
+            
+            peer.on('open', () => {
+                conn = peer.connect(code)
+                setupConnectionHandlers()
+            })
+            
+            peer.on('error', (err) => {
+                showToast('Could not connect. Check the code!', 'error')
+                cancelRoom()
+            })
+        }
+        
+        function setupConnectionHandlers() {
+            conn.on('open', () => {
+                // Exchange names
+                conn.send({ type: 'name', name: myName })
+                
+                // Switch to game screen
+                document.getElementById('created-room-panel').classList.add('hidden')
+                document.getElementById('join-form-panel').classList.add('hidden')
+                document.getElementById('multi-lobby').classList.add('hidden')
+                document.getElementById('multi-game-screen').classList.remove('hidden')
+                
+                document.getElementById('my-name-display').textContent = myName
+                document.getElementById('opp-name-display').textContent = oppName || 'FRIEND'
+                
+                renderCategories('categories-grid-multi', true)
+                gameHistory = []
+                showToast('Connected! 🎉 Pick a question for them!', 'success')
+                currentPickMode = true
+                updateTurnIndicator()
+            })
+            
+            conn.on('data', (data) => {
+                if (data.type === 'name') {
+                    oppName = data.name
+                    document.getElementById('opp-name-display').textContent = oppName
+                }
+                
+                if (data.type === 'answer') {
+                    // Received an answer from opponent
+                    gameHistory.push({
+                        num: data.num,
+                        question: data.question,
+                        answer: data.answer,
+                        by: oppName,
+                        timestamp: new Date()
+                    })
+                    showToast(`${oppName} answered #${data.num}!`, 'success')
+                    updateTurnIndicator()
+                }
+                
+                if (data.type === 'pick_question') {
+                    // Opponent picked a question FOR ME
+                    currentPickMode = false
+                    updateTurnIndicator()
+                    showAnswerModal(data.num, data.question, 'multi')
+                }
+            })
+            
+            conn.on('close', () => {
+                showToast('Friend left the game 😢', 'error')
+                leaveMultiGame()
+            })
+        }
+        
+        function multiPickCategory(cat) {
+            if (!currentPickMode) {
+                showToast("Wait for your turn!", "error")
+                return
+            }
+            
+            currentCategory = cat
+            document.getElementById('multi-game-screen').classList.add('hidden')
+            const qs = document.getElementById('questions-screen')
+            qs.classList.remove('hidden')
+            qs.classList.add('flex')
+            
+            document.getElementById('current-category-title').innerHTML = `
+                ${cat} 
+                <span class="text-xs bg-cyan-400 text-black px-3 py-1 rounded-3xl ml-3">PICK FOR ${oppName}</span>`
+            
+            const listEl = document.getElementById('questions-list')
+            listEl.innerHTML = ''
+            
+            gameData[cat].forEach(q => {
+                const div = document.createElement('div')
+                div.className = 'question-card flex justify-between items-center bg-zinc-900 border border-cyan-400 hover:border-emerald-400 px-6 py-5 rounded-3xl cursor-pointer'
+                div.innerHTML = `
+                    <div class="flex items-center gap-6">
+                        <div class="w-12 h-12 bg-cyan-400 text-black font-bold flex items-center justify-center text-2xl rounded-2xl">#${q.num}</div>
+                        <div class="text-lg">${q.text}</div>
+                    </div>
+                    <div class="text-4xl text-emerald-400">→</div>`
+                div.onclick = () => {
+                    sendPickedQuestion(q.num, q.text)
+                }
+                listEl.appendChild(div)
+            })
+        }
+        
+        function sendPickedQuestion(num, text) {
+            if (conn && conn.open) {
+                conn.send({
+                    type: 'pick_question',
+                    num: num,
+                    question: text
+                })
+                // Add to our history immediately
+                gameHistory.push({
+                    num: num,
+                    question: text,
+                    answer: '— waiting for answer —',
+                    by: `Picked for ${oppName}`,
+                    timestamp: new Date()
+                })
+                backToMultiGame()
+                currentPickMode = false
+                updateTurnIndicator()
+                showToast(`Question #${num} sent to ${oppName}!`, 'success')
+            }
+        }
+        
+        function cancelPick() {
+            backToMultiGame()
+        }
+        
+        function backToMultiGame() {
+            const qs = document.getElementById('questions-screen')
+            qs.classList.add('hidden')
+            qs.classList.remove('flex')
+            document.getElementById('multi-game-screen').classList.remove('hidden')
+            currentCategory = null
+        }
+        
+        function pickForOpponent() {
+            // Already handled by category grid
+            if (currentPickMode) {
+                showToast("Pick a category below 👇", "success")
+            }
+        }
+        
+        function updateTurnIndicator() {
+            const indicator = document.getElementById('turn-indicator')
+            if (currentPickMode) {
+                indicator.dataset.mode = 'waiting'
+                indicator.innerHTML = `<span id="turn-text" class="flex items-center gap-3">YOUR TURN • Pick a question for <span class="font-bold">${oppName}</span> <span class="text-3xl">👉</span></span>`
+                indicator.style.background = 'linear-gradient(to right, #ec4899, #22d3ee)'
+            } else {
+                indicator.dataset.mode = 'waiting'
+                indicator.innerHTML = `<span id="turn-text">Waiting for ${oppName} to answer...</span>`
+                indicator.style.background = 'linear-gradient(to right, #64748b, #64748b)'
+            }
+        }
+        
+        // ============== SHARED UTILS ==============
+        function toggleMode() {
+            // Already handled by tab clicks
+        }
+        
+        function switchToSolo() {
+            currentMode = 'solo'
+            document.getElementById('solo-tab').classList.add('bg-pink-500', 'text-black')
+            document.getElementById('multi-tab').classList.remove('bg-pink-500', 'text-black')
+            document.getElementById('multi-lobby').classList.add('hidden')
+            document.getElementById('multi-game-screen').classList.add('hidden')
+            document.getElementById('solo-screen').classList.remove('hidden')
+            
+            // Clean up any peer connection
+            if (peer) peer.destroy()
+            peer = null
+            conn = null
+        }
+        
+        function switchToMulti() {
+            currentMode = 'multi'
+            document.getElementById('multi-tab').classList.add('bg-pink-500', 'text-black')
+            document.getElementById('solo-tab').classList.remove('bg-pink-500', 'text-black')
+            document.getElementById('solo-screen').classList.add('hidden')
+            document.getElementById('multi-lobby').classList.remove('hidden')
+            renderCategories('categories-grid-multi', true)
+        }
+        
+        function leaveMultiGame() {
+            if (conn) conn.close()
+            if (peer) peer.destroy()
+            peer = null
+            conn = null
+            gameHistory = []
+            document.getElementById('multi-game-screen').classList.add('hidden')
+            document.getElementById('multi-lobby').classList.remove('hidden')
+            showToast('Left the room')
+        }
+        
+        function cancelRoom() {
+            if (peer) peer.destroy()
+            peer = null
+            document.getElementById('created-room-panel').classList.add('hidden')
+            document.getElementById('multi-lobby').classList.remove('hidden')
+        }
+        
+        function copyRoomCode() {
+            navigator.clipboard.writeText(roomCode).then(() => {
+                showToast('Code copied to clipboard!')
+            })
+        }
+        
+        function viewHistory() {
+            const modal = document.getElementById('history-modal')
+            const content = document.getElementById('history-content')
+            content.innerHTML = ''
+            
+            if (gameHistory.length === 0) {
+                content.innerHTML = `<div class="text-center py-12 text-zinc-400">No answers yet. Start picking questions!</div>`
+            } else {
+                gameHistory.forEach(entry => {
+                    const div = document.createElement('div')
+                    div.className = 'border-l-4 border-pink-400 pl-4'
+                    div.innerHTML = `
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="font-mono">#${entry.num}</span>
+                        <span class="text-emerald-400">${entry.by}</span>
+                    </div>
+                    <div class="text-base">${entry.question}</div>
+                    <div class="mt-3 italic text-cyan-300">${entry.answer}</div>`
+                    content.appendChild(div)
+                })
+            }
+            
+            modal.classList.remove('hidden')
+            modal.classList.add('flex')
+        }
+        
+        function hideHistory() {
+            const modal = document.getElementById('history-modal')
+            modal.classList.add('hidden')
+            modal.classList.remove('flex')
+        }
+        
+        function showHelp() {
+            document.getElementById('help-modal').classList.remove('hidden')
+            document.getElementById('help-modal').classList.add('flex')
+        }
+        
+        function hideHelp() {
+            const modal = document.getElementById('help-modal')
+            modal.classList.add('hidden')
+            modal.classList.remove('flex')
+        }
+        
+        function pickRandomQuestion() {
+            const allQuestions = []
+            Object.keys(gameData).forEach(cat => {
+                gameData[cat].forEach(q => allQuestions.push({ ...q, cat }))
+            })
+            const random = allQuestions[Math.floor(Math.random() * allQuestions.length)]
+            showAnswerModal(random.num, random.text, 'solo')
+        }
+        
+        function showToast(msg, type = 'success') {
+            const toast = document.createElement('div')
+            toast.style.cssText = `position:fixed; bottom:20px; left:50%; transform:translateX(-50%); padding:16px 24px; border-radius:9999px; font-size:13px; z-index:9999; box-shadow:0 10px 15px -3px rgb(0 0 0);`
+            toast.style.background = type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#ec4899'
+            toast.style.color = 'white'
+            toast.textContent = msg
+            document.body.appendChild(toast)
+            
+            setTimeout(() => {
+                toast.style.transitionDuration = '300ms'
+                toast.style.opacity = '0'
+                setTimeout(() => toast.remove(), 300)
+            }, 2800)
+        }
+        
+        // ============== START THE GAME ==============
+        function start() {
+            initTailwind()
+            renderCategories('categories-grid-solo')
+            console.log('%c✅ The Number Game V2 ready for GitHub Pages!', 'color:#ec4899; font-family:monospace')
+            console.log('Multiplayer works instantly via PeerJS P2P — no backend required!')
+        }
+        
+        window.onload = start
+    </script>
+</body>
+</html>
